@@ -243,7 +243,7 @@
         }
         .control-btn:hover { background: rgba(255,255,255,0.1); }
         
-        #mute-btn { right: 50px; } /* Geser dikit ke kiri */
+        #mute-btn { right: 50px; } 
         #mute-btn.playing { border-color: #818CF8; color: #818CF8; }
         
         #settings-btn { right: 10px; padding: 5px 8px; }
@@ -403,9 +403,11 @@
     <!-- OVERLAY PEMENANG RONDE -->
     <div id="round-winner-overlay" class="hidden fixed inset-0 flex items-center justify-center p-6 opacity-0 pointer-events-none">
         <div class="winner-card w-full max-w-sm rounded-3xl p-6 text-center transform scale-90 transition-transform duration-500 flex flex-col max-h-[80vh]">
-            <div class="text-5xl mb-2 animate-bounce">🏆</div>
-            <h2 class="text-lg font-bold text-indigo-300 uppercase tracking-widest mb-4">Pemenang Ronde <span id="overlay-round-num">1</span></h2>
+            <div id="overlay-icon" class="text-5xl mb-2 animate-bounce">🏆</div>
+            <h2 id="overlay-title" class="text-lg font-bold text-indigo-300 uppercase tracking-widest mb-4">Pemenang Ronde <span id="overlay-round-num">1</span></h2>
+            
             <div class="winner-list-container flex-grow overflow-y-auto mb-4 pr-1 text-left space-y-2" id="winner-list-content"></div>
+
             <div class="pt-4 border-t border-white/10">
                 <div class="text-xs font-bold text-emerald-400 animate-pulse">Melanjut ke Ronde Berikutnya...</div>
             </div>
@@ -444,15 +446,24 @@
     <!-- SETTINGS MODAL -->
     <div id="settings-modal" class="hidden fixed inset-0 flex items-center justify-center p-6 opacity-0 pointer-events-none">
         <div class="settings-card w-full max-w-xs rounded-2xl p-6 text-center transform scale-95 transition-transform duration-300">
-            <h2 class="text-lg font-bold text-white mb-4">Pengaturan Koneksi</h2>
+            <h2 class="text-lg font-bold text-white mb-4">Pengaturan</h2>
+            
             <div class="mb-4 text-left">
-                <label class="text-xs text-gray-400 block mb-1">WebSocket URL (IndoFinity)</label>
+                <label class="text-xs text-gray-400 block mb-1">WebSocket URL</label>
                 <input type="text" id="ws-url-input" class="w-full bg-black/40 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" placeholder="ws://localhost:62024">
-                <p class="text-[10px] text-gray-500 mt-1">Gunakan IP lokal jika di HP (cth: ws://192.168.1.5:62024)</p>
             </div>
+
+            <!-- Data Management -->
+             <div class="mb-6 text-left border-t border-white/10 pt-4">
+                <label class="text-xs text-gray-400 block mb-2">Data Game</label>
+                <button id="reset-data-btn" class="w-full flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold py-2 rounded transition-all">
+                    <span>🗑️</span> Hapus Leaderboard & User
+                </button>
+            </div>
+
             <div class="flex gap-2">
-                <button id="close-settings" class="flex-1 bg-gray-600 hover:bg-gray-500 text-white text-sm font-bold py-2 rounded">Batal</button>
-                <button id="save-settings" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold py-2 rounded">Simpan</button>
+                <button id="close-settings" class="flex-1 bg-gray-600 hover:bg-gray-500 text-white text-sm font-bold py-2 rounded">Tutup</button>
+                <button id="save-settings" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold py-2 rounded">Simpan URL</button>
             </div>
         </div>
     </div>
@@ -565,11 +576,18 @@
             roundTime: 60, minNumber: 2, maxSquareVal: 12, maxCircleVal: 6, maxRounds: 10
         };
 
+        // LOAD DATA
+        const savedScores = localStorage.getItem('math_bubbles_scores');
+        const savedUsers = localStorage.getItem('math_bubbles_users');
+
         let state = {
             isPlaying: false, timeLeft: CONFIG.roundTime, answers: {}, activeColorsCount: 0,
             timerInterval: null, currentMission: null, currentRound: 1,
             isSimulationRunning: false, simInterval: null,
-            roundScores: {}, globalScores: {}, userSolvedColors: {}, clearingColors: {}, users: {} 
+            roundScores: {}, 
+            globalScores: savedScores ? JSON.parse(savedScores) : {}, 
+            userSolvedColors: {}, clearingColors: {},
+            users: savedUsers ? JSON.parse(savedUsers) : {} 
         };
 
         const els = {
@@ -581,8 +599,15 @@
             podium1: document.getElementById('podium-1'), podium2: document.getElementById('podium-2'), podium3: document.getElementById('podium-3'), globalRankList: document.getElementById('global-rank-list'),
             connStatus: document.getElementById('connection-status'), connText: document.getElementById('status-text'),
             settingsBtn: document.getElementById('settings-btn'), settingsModal: document.getElementById('settings-modal'),
-            wsUrlInput: document.getElementById('ws-url-input'), saveSettingsBtn: document.getElementById('save-settings'), closeSettingsBtn: document.getElementById('close-settings')
+            wsUrlInput: document.getElementById('ws-url-input'), saveSettingsBtn: document.getElementById('save-settings'), closeSettingsBtn: document.getElementById('close-settings'),
+            resetDataBtn: document.getElementById('reset-data-btn')
         };
+
+        // --- HELPER SAVE ---
+        function saveLeaderboardData() {
+            localStorage.setItem('math_bubbles_scores', JSON.stringify(state.globalScores));
+            localStorage.setItem('math_bubbles_users', JSON.stringify(state.users));
+        }
 
         // --- WEBSOCKET CONNECTION ---
         let ws;
@@ -590,10 +615,9 @@
 
         function initWS() {
             if (ws) {
-                ws.onclose = null; // Remove listeners to prevent loops
+                ws.onclose = null; 
                 ws.close();
             }
-            
             console.log(`Connecting to WS: ${wsUrl}`);
             ws = new WebSocket(wsUrl);
 
@@ -601,7 +625,6 @@
                 console.log('✅ Terhubung ke IndoFinity');
                 updateConnectionStatus('connected');
                 showNotification('System', 'Game Siap!', 'sys');
-                // Only start if not already playing or just starting
                 if(!state.isPlaying && state.currentRound === 1) startGame();
             };
 
@@ -659,9 +682,22 @@
             if (newUrl) {
                 wsUrl = newUrl;
                 localStorage.setItem('ws_url', wsUrl);
-                initWS(); // Reconnect
+                initWS(); 
                 els.closeSettingsBtn.click();
                 showNotification('System', 'URL Tersimpan. Menghubungkan ulang...', 'sys');
+            }
+        });
+
+        // RESET DATA LOGIC
+        els.resetDataBtn.addEventListener('click', () => {
+            if(confirm("Yakin ingin menghapus SEMUA data leaderboard?")) {
+                localStorage.removeItem('math_bubbles_scores');
+                localStorage.removeItem('math_bubbles_users');
+                state.globalScores = {};
+                state.users = {};
+                state.roundScores = {};
+                showNotification('System', 'Data Leaderboard Berhasil Dihapus', 'sys');
+                els.closeSettingsBtn.click();
             }
         });
 
@@ -823,12 +859,22 @@
         }
 
         function checkAnswer(uniqueId, comment, nickname, avatarUrl) {
+            let userUpdated = false;
             if (!state.users[uniqueId]) {
                 state.users[uniqueId] = { nickname: nickname || uniqueId, avatar: avatarUrl };
+                userUpdated = true;
             } else {
-                if (nickname) state.users[uniqueId].nickname = nickname;
-                if (avatarUrl) state.users[uniqueId].avatar = avatarUrl;
+                if (nickname && state.users[uniqueId].nickname !== nickname) {
+                    state.users[uniqueId].nickname = nickname;
+                    userUpdated = true;
+                }
+                if (avatarUrl && state.users[uniqueId].avatar !== avatarUrl) {
+                    state.users[uniqueId].avatar = avatarUrl;
+                    userUpdated = true;
+                }
             }
+            if (userUpdated) saveLeaderboardData();
+
             const match = comment.match(/-?\d+/);
             if (!match) return;
             const guess = parseInt(match[0]);
@@ -844,10 +890,15 @@
             if (state.userSolvedColors[user] && state.userSolvedColors[user][colorName]) return; 
             if (!state.userSolvedColors[user]) state.userSolvedColors[user] = {};
             state.userSolvedColors[user][colorName] = true;
+            
             if (!state.roundScores[user]) state.roundScores[user] = 0;
             state.roundScores[user]++;
+            
             if (!state.globalScores[user]) state.globalScores[user] = 0;
             state.globalScores[user]++;
+            
+            saveLeaderboardData();
+
             if (state.clearingColors[colorName]) return;
             state.clearingColors[colorName] = true;
             sfx.playPop();
@@ -880,14 +931,31 @@
             setTimeout(() => els.colorToast.classList.add('hidden'), 2000);
         }
 
-        function endRound() {
+        function endRound(isTimeUp = false) {
             state.isPlaying = false;
             clearInterval(state.timerInterval);
-            sfx.playWin(); 
+            
+            if (!isTimeUp) sfx.playWin(); 
+
             els.winnerListContent.innerHTML = '';
             const sortedWinners = Object.entries(state.roundScores)
                 .map(([name, score]) => ({ name, score }))
                 .sort((a, b) => b.score - a.score);
+
+            const titleEl = document.querySelector('#round-winner-overlay h2');
+            const iconEl = document.querySelector('#round-winner-overlay .text-5xl');
+            const roundSpan = `<span id="overlay-round-num">${state.currentRound}</span>`;
+
+            if (isTimeUp) {
+                iconEl.innerText = "⏳";
+                titleEl.innerHTML = `WAKTU HABIS - RONDE ${roundSpan}`;
+                titleEl.className = "text-lg font-bold text-red-400 uppercase tracking-widest mb-4";
+            } else {
+                iconEl.innerText = "🏆";
+                titleEl.innerHTML = `PEMENANG RONDE ${roundSpan}`;
+                titleEl.className = "text-lg font-bold text-indigo-300 uppercase tracking-widest mb-4";
+            }
+
             if (sortedWinners.length > 0) {
                 sortedWinners.forEach((winner, index) => {
                     const userData = state.users[winner.name] || {};
@@ -903,16 +971,19 @@
                     els.winnerListContent.appendChild(row);
                 });
             } else {
-                els.winnerListContent.innerHTML = '<div class="text-center text-gray-400 py-4 italic">Tidak ada pemenang :(</div>';
+                els.winnerListContent.innerHTML = '<div class="text-center text-gray-400 py-8 italic flex flex-col items-center gap-2"><span class="text-2xl">💨</span><span>Tidak ada pemenang</span></div>';
             }
+
             els.overlayRoundNum.innerText = state.currentRound;
             els.roundOverlay.classList.remove('hidden');
             els.roundOverlay.classList.add('flex');
+            
             setTimeout(() => {
                 els.roundOverlay.style.opacity = '1';
                 els.roundOverlay.style.pointerEvents = 'auto';
                 document.querySelector('.winner-card').style.transform = 'scale(1)';
             }, 10);
+
             setTimeout(() => {
                 state.currentRound++;
                 els.roundOverlay.style.opacity = '0';
@@ -930,10 +1001,7 @@
                 updateTimerUI();
                 if (state.timeLeft <= 10 && state.timeLeft > 0) sfx.playTick();
                 if (state.timeLeft <= 0) {
-                    state.isPlaying = false;
-                    clearInterval(state.timerInterval);
-                    showNotification('SYSTEM', 'WAKTU HABIS! RESTART RONDE...', 'alert');
-                    setTimeout(startGame, 3000); 
+                    endRound(true);
                 }
             }, 1000);
         }
