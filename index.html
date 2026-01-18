@@ -220,12 +220,7 @@
         .progress-fill { height: 100%; background: #818CF8; border-radius: 999px; transition: width 1s linear; }
         
         /* Avatar Helper */
-        .user-avatar {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 50%;
-        }
+        .user-avatar { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
         
         /* Buttons */
         .control-btn {
@@ -245,62 +240,47 @@
         
         #mute-btn { right: 50px; } 
         #mute-btn.playing { border-color: #818CF8; color: #818CF8; }
-        
         #settings-btn { right: 10px; padding: 5px 8px; }
+
+        /* Toggle Switch CSS */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #68D391;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #68D391;
+        }
+        .toggle-checkbox {
+            right: 0;
+            z-index: 1;
+            border-color: #CBD5E0;
+            transition: all 0.3s;
+        }
+        .toggle-label {
+            width: 40px;
+            height: 20px;
+            background-color: #718096;
+            border-radius: 9999px;
+            transition: all 0.3s;
+        }
 
         /* --- CONNECTION STATUS INDICATOR --- */
         #connection-status {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(0,0,0,0.3);
-            border: 1px solid rgba(255,255,255,0.1);
-            padding: 5px 10px;
-            border-radius: 20px;
+            top: 10px; left: 10px;
+            display: flex; align-items: center; gap: 6px;
+            background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+            padding: 5px 10px; border-radius: 20px;
             z-index: 50;
-            font-size: 0.7rem;
-            font-weight: bold;
-            color: #94A3B8; 
+            font-size: 0.7rem; font-weight: bold; color: #94A3B8; 
             transition: all 0.3s;
         }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: #64748B; 
-            transition: background-color 0.3s;
-        }
-
-        /* Status Colors */
-        #connection-status.online {
-            border-color: rgba(16, 185, 129, 0.3);
-            color: #A7F3D0;
-            background: rgba(6, 78, 59, 0.4);
-        }
-        #connection-status.online .status-dot {
-            background-color: #34D399; 
-            box-shadow: 0 0 8px #34D399;
-            animation: pulse-green 2s infinite;
-        }
-
-        #connection-status.offline {
-            border-color: rgba(239, 68, 68, 0.3);
-            color: #FECACA;
-            background: rgba(127, 29, 29, 0.4);
-        }
-        #connection-status.offline .status-dot {
-            background-color: #F87171; 
-        }
-
-        @keyframes pulse-green {
-            0% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(0.9); }
-            100% { opacity: 1; transform: scale(1); }
-        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background-color: #64748B; transition: background-color 0.3s; }
+        #connection-status.online { border-color: rgba(16, 185, 129, 0.3); color: #A7F3D0; background: rgba(6, 78, 59, 0.4); }
+        #connection-status.online .status-dot { background-color: #34D399; box-shadow: 0 0 8px #34D399; animation: pulse-green 2s infinite; }
+        #connection-status.offline { border-color: rgba(239, 68, 68, 0.3); color: #FECACA; background: rgba(127, 29, 29, 0.4); }
+        #connection-status.offline .status-dot { background-color: #F87171; }
+        @keyframes pulse-green { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body class="p-4 relative">
@@ -322,6 +302,12 @@
         <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-indigo-500 text-white text-[10px] font-bold px-4 py-1.5 rounded-full tracking-widest uppercase shadow-lg border border-indigo-400">
             Misi Ronde Ini
         </div>
+        
+        <!-- HARD MODE BADGE -->
+        <div id="hard-mode-badge" class="hidden absolute top-2 right-2 bg-red-600 text-white text-[8px] font-bold px-2 py-0.5 rounded shadow animate-pulse border border-red-400">
+            HARD MODE
+        </div>
+
         <h1 id="mission-title" class="text-xl font-black text-white leading-none mb-1 mt-2 tracking-tight transition-all drop-shadow-sm">
             Memuat Misi...
         </h1>
@@ -448,9 +434,22 @@
         <div class="settings-card w-full max-w-xs rounded-2xl p-6 text-center transform scale-95 transition-transform duration-300">
             <h2 class="text-lg font-bold text-white mb-4">Pengaturan</h2>
             
+            <!-- Connection Settings -->
             <div class="mb-4 text-left">
                 <label class="text-xs text-gray-400 block mb-1">WebSocket URL</label>
                 <input type="text" id="ws-url-input" class="w-full bg-black/40 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" placeholder="ws://localhost:62024">
+            </div>
+
+            <!-- Hard Mode Settings -->
+            <div class="mb-4 text-left border-t border-white/10 pt-4 flex items-center justify-between">
+                <div>
+                    <label class="text-xs text-gray-300 font-bold block">Hard Mode 🔥</label>
+                    <p class="text-[10px] text-gray-500">Angka lebih besar & bervariasi</p>
+                </div>
+                <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                    <input type="checkbox" name="toggle" id="hard-mode-toggle" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                    <label for="hard-mode-toggle" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-600 cursor-pointer"></label>
+                </div>
             </div>
 
             <!-- Data Management -->
@@ -463,7 +462,7 @@
 
             <div class="flex gap-2">
                 <button id="close-settings" class="flex-1 bg-gray-600 hover:bg-gray-500 text-white text-sm font-bold py-2 rounded">Tutup</button>
-                <button id="save-settings" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold py-2 rounded">Simpan URL</button>
+                <button id="save-settings" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold py-2 rounded">Simpan</button>
             </div>
         </div>
     </div>
@@ -573,12 +572,18 @@
                 { name: 'Hitam', class: 'bg-flat-black' }, { name: 'Coklat', class: 'bg-flat-brown' },
                 { name: 'Navy', class: 'bg-flat-navy' }
             ],
-            roundTime: 60, minNumber: 2, maxSquareVal: 12, maxCircleVal: 6, maxRounds: 10
+            roundTime: 60,
+            maxRounds: 10,
+            difficulty: {
+                normal: { min: 2, maxSquare: 12, maxCircle: 6 },
+                hard: { min: 10, maxSquare: 50, maxCircle: 12 }
+            }
         };
 
         // LOAD DATA
         const savedScores = localStorage.getItem('math_bubbles_scores');
         const savedUsers = localStorage.getItem('math_bubbles_users');
+        const savedHardMode = localStorage.getItem('math_bubbles_hardmode') === 'true';
 
         let state = {
             isPlaying: false, timeLeft: CONFIG.roundTime, answers: {}, activeColorsCount: 0,
@@ -587,7 +592,8 @@
             roundScores: {}, 
             globalScores: savedScores ? JSON.parse(savedScores) : {}, 
             userSolvedColors: {}, clearingColors: {},
-            users: savedUsers ? JSON.parse(savedUsers) : {} 
+            users: savedUsers ? JSON.parse(savedUsers) : {},
+            hardMode: savedHardMode
         };
 
         const els = {
@@ -600,8 +606,13 @@
             connStatus: document.getElementById('connection-status'), connText: document.getElementById('status-text'),
             settingsBtn: document.getElementById('settings-btn'), settingsModal: document.getElementById('settings-modal'),
             wsUrlInput: document.getElementById('ws-url-input'), saveSettingsBtn: document.getElementById('save-settings'), closeSettingsBtn: document.getElementById('close-settings'),
-            resetDataBtn: document.getElementById('reset-data-btn')
+            resetDataBtn: document.getElementById('reset-data-btn'),
+            hardModeToggle: document.getElementById('hard-mode-toggle'), hardModeBadge: document.getElementById('hard-mode-badge')
         };
+
+        // Initialize UI State
+        els.hardModeToggle.checked = state.hardMode;
+        if(state.hardMode) els.hardModeBadge.classList.remove('hidden');
 
         // --- HELPER SAVE ---
         function saveLeaderboardData() {
@@ -660,6 +671,9 @@
         // --- SETTINGS LOGIC ---
         els.settingsBtn.addEventListener('click', () => {
             els.wsUrlInput.value = wsUrl;
+            // Sinkronkan toggle UI dengan state saat modal dibuka
+            els.hardModeToggle.checked = state.hardMode;
+            
             els.settingsModal.classList.remove('hidden');
             els.settingsModal.classList.add('flex');
             setTimeout(() => {
@@ -679,12 +693,35 @@
 
         els.saveSettingsBtn.addEventListener('click', () => {
             const newUrl = els.wsUrlInput.value.trim();
-            if (newUrl) {
+            const prevHardMode = state.hardMode; // Simpan state sebelumnya
+            
+            // Save Hard Mode Setting
+            state.hardMode = els.hardModeToggle.checked;
+            localStorage.setItem('math_bubbles_hardmode', state.hardMode);
+            
+            // Update UI Badge
+            if (state.hardMode) els.hardModeBadge.classList.remove('hidden');
+            else els.hardModeBadge.classList.add('hidden');
+
+            // Save WebSocket URL
+            if (newUrl && newUrl !== wsUrl) {
                 wsUrl = newUrl;
                 localStorage.setItem('ws_url', wsUrl);
                 initWS(); 
-                els.closeSettingsBtn.click();
-                showNotification('System', 'URL Tersimpan. Menghubungkan ulang...', 'sys');
+            }
+            
+            els.closeSettingsBtn.click();
+            showNotification('System', 'Pengaturan Disimpan', 'sys');
+
+            // LOGIC BARU: Refresh Board jika Hard Mode berubah & Game sedang jalan
+            if (prevHardMode !== state.hardMode && state.isPlaying) {
+                // Reset board visual & logic
+                els.gameArea.innerHTML = '';
+                state.answers = {};
+                // Generate ulang level dengan difficulty baru
+                generateLevel();
+                // Play sound feedback
+                sfx.playPop();
             }
         });
 
@@ -829,7 +866,10 @@
         }
 
         function getRandomNumber(isCircle) {
-            return Math.floor(Math.random() * (isCircle ? CONFIG.maxCircleVal : CONFIG.maxSquareVal) - CONFIG.minNumber + 1) + CONFIG.minNumber;
+            const settings = state.hardMode ? CONFIG.difficulty.hard : CONFIG.difficulty.normal;
+            const max = isCircle ? settings.maxCircle : settings.maxSquare;
+            const min = settings.min;
+            return Math.floor(Math.random() * (max - min + 1)) + min;
         }
 
         function calculateAllAnswers(shapes) {
