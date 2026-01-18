@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Bubbles - TikTok Live Interactive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* --- MODERN DIM THEME --- */
+        body {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden; 
+            height: 100vh;
+            color: #F1F5F9; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 2rem; 
+            gap: 1rem; 
+            position: relative;
+        }
+
+        /* --- BACKGROUND ANIMATION --- */
+        #math-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0; 
+            pointer-events: none;
+        }
+
+        .floating-symbol {
+            position: absolute;
+            color: rgba(255, 255, 255, 0.03); 
+            font-weight: 900;
+            user-select: none;
+            will-change: transform, opacity;
+            text-shadow: 0 0 10px rgba(255,255,255,0.1);
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(110vh) rotate(0deg) scale(0.5); opacity: 0; }
+            10% { opacity: 0.4; } 
+            90% { opacity: 0.4; } 
+            100% { transform: translateY(-20vh) rotate(360deg) scale(1.2); opacity: 0; }
+        }
+
+        /* --- GLASS PANELS --- */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.6); 
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(16px); 
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 24px; 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            position: relative;
+            z-index: 10; 
+        }
+
+        /* --- OVERLAYS --- */
+        #round-winner-overlay, #game-over-overlay, #settings-modal {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(30px);
+            z-index: 100;
+            transition: opacity 0.5s ease;
+        }
+        
+        .winner-card, .settings-card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+            border: 1px solid rgba(255,255,255,0.15);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        /* PODIUM STYLES */
+        .podium-container {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .podium-place {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 90px;
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform: translateY(100%); 
+            opacity: 0;
+        }
+
+        .podium-place.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .podium-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #334155;
+            border: 3px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden; 
+            margin-bottom: -10px;
+            z-index: 2;
+            position: relative;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+        
+        .podium-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .podium-pillar {
+            width: 100%;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 20px;
+            color: white;
+            font-weight: bold;
+            position: relative;
+        }
+
+        /* Rank Specifics */
+        .rank-1 .podium-pillar { height: 180px; background: linear-gradient(to bottom, #F59E0B, #B45309); border: 2px solid #FCD34D; }
+        .rank-1 .podium-avatar { border-color: #FCD34D; background: #FEF3C7; width: 80px; height: 80px; }
+        
+        .rank-2 .podium-pillar { height: 130px; background: linear-gradient(to bottom, #94A3B8, #475569); border: 2px solid #E2E8F0; }
+        .rank-2 .podium-avatar { border-color: #E2E8F0; background: #F1F5F9; }
+        
+        .rank-3 .podium-pillar { height: 100px; background: linear-gradient(to bottom, #B45309, #78350F); border: 2px solid #FDBA74; }
+        .rank-3 .podium-avatar { border-color: #FDBA74; background: #FFF7ED; }
+
+        .score-pill {
+            background: rgba(0,0,0,0.3);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+
+        /* Scrollbar */
+        .winner-list-container::-webkit-scrollbar { width: 4px; }
+        .winner-list-container::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); }
+        .winner-list-container::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
+
+        /* --- SHAPE STYLES --- */
+        @keyframes scaleIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes poof { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.8; } 100% { transform: scale(0); opacity: 0; } }
+
+        .shape {
+            animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem; 
+            font-weight: 800; 
+            color: #fff;
+            width: 65px;  
+            height: 65px; 
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); 
+            transition: transform 0.2s;
+            position: relative;
+            z-index: 20; 
+        }
+        .shape.solved { animation: poof 0.4s ease-in forwards; pointer-events: none; }
+        .shape:hover { transform: translateY(-3px) scale(1.05); z-index: 30; }
+        .shape-circle { border-radius: 50%; }
+        .shape-square { border-radius: 14px; } 
+        .shape::after { content: ''; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; background: rgba(255,255,255,0.4); border-radius: 50%; }
+
+        /* Colors */
+        .bg-flat-red    { background: linear-gradient(135deg, #FF5252, #D32F2F); }
+        .bg-flat-blue   { background: linear-gradient(135deg, #448AFF, #1976D2); }
+        .bg-flat-green  { background: linear-gradient(135deg, #00E676, #00C853); color: #003300; } 
+        .bg-flat-purple { background: linear-gradient(135deg, #E040FB, #AA00FF); }
+        .bg-flat-orange { background: linear-gradient(135deg, #FFAB40, #FF6D00); }
+        .bg-flat-pink   { background: linear-gradient(135deg, #FF4081, #C2185B); }
+        .bg-flat-yellow { background: linear-gradient(135deg, #FFEA00, #FFD600); color: #3E2723; } 
+        .bg-flat-teal   { background: linear-gradient(135deg, #64FFDA, #00BFA5); color: #004D40; }
+        .bg-flat-black  { background: linear-gradient(135deg, #90A4AE, #546E7A); } 
+        .bg-flat-brown  { background: linear-gradient(135deg, #A1887F, #5D4037); }
+        .bg-flat-navy   { background: linear-gradient(135deg, #536DFE, #303F9F); }
+
+        /* Grid */
+        #game-area {
+            width: 100%;
+            flex-grow: 1; 
+            min-height: 350px; 
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); 
+            grid-template-rows: repeat(3, 1fr); 
+            align-content: center; 
+            justify-items: center;
+            gap: 15px; 
+            padding: 15px;
+            margin-bottom: 20px;
+            z-index: 10;
+        }
+
+        /* Progress Bar */
+        .progress-container { background: rgba(255, 255, 255, 0.1); border-radius: 999px; overflow: hidden; height: 10px; border: 1px solid rgba(255,255,255,0.1); }
+        .progress-fill { height: 100%; background: #818CF8; border-radius: 999px; transition: width 1s linear; }
+        
+        /* Avatar Helper */
+        .user-avatar {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        
+        /* Buttons */
+        .control-btn {
+            position: absolute;
+            top: 10px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            z-index: 50;
+            transition: all 0.3s;
+        }
+        .control-btn:hover { background: rgba(255,255,255,0.1); }
+        
+        #mute-btn { right: 50px; } /* Geser dikit ke kiri */
+        #mute-btn.playing { border-color: #818CF8; color: #818CF8; }
+        
+        #settings-btn { right: 10px; padding: 5px 8px; }
+
+        /* --- CONNECTION STATUS INDICATOR --- */
+        #connection-status {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 5px 10px;
+            border-radius: 20px;
+            z-index: 50;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #94A3B8; 
+            transition: all 0.3s;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #64748B; 
+            transition: background-color 0.3s;
+        }
+
+        /* Status Colors */
+        #connection-status.online {
+            border-color: rgba(16, 185, 129, 0.3);
+            color: #A7F3D0;
+            background: rgba(6, 78, 59, 0.4);
+        }
+        #connection-status.online .status-dot {
+            background-color: #34D399; 
+            box-shadow: 0 0 8px #34D399;
+            animation: pulse-green 2s infinite;
+        }
+
+        #connection-status.offline {
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #FECACA;
+            background: rgba(127, 29, 29, 0.4);
+        }
+        #connection-status.offline .status-dot {
+            background-color: #F87171; 
+        }
+
+        @keyframes pulse-green {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="p-4 relative">
+
+    <div id="math-bg"></div>
+    
+    <!-- Connection Status -->
+    <div id="connection-status" class="offline">
+        <div class="status-dot"></div>
+        <span id="status-text">OFFLINE</span>
+    </div>
+
+    <!-- Top Right Controls -->
+    <button id="mute-btn" class="control-btn">🔇 NYALAKAN SFX</button>
+    <button id="settings-btn" class="control-btn">⚙️</button>
+
+    <!-- HEADER -->
+    <header class="w-full max-w-md glass-panel p-5 text-center z-10 relative shrink-0">
+        <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-indigo-500 text-white text-[10px] font-bold px-4 py-1.5 rounded-full tracking-widest uppercase shadow-lg border border-indigo-400">
+            Misi Ronde Ini
+        </div>
+        <h1 id="mission-title" class="text-xl font-black text-white leading-none mb-1 mt-2 tracking-tight transition-all drop-shadow-sm">
+            Memuat Misi...
+        </h1>
+        
+        <!-- LEGEND -->
+        <div class="flex justify-center items-center gap-4 mt-4 bg-black/20 p-2 rounded-2xl border border-white/10 shadow-inner mx-2">
+            <div class="flex items-center gap-1 opacity-90">
+                <div class="w-6 h-6 rounded bg-slate-500 flex items-center justify-center text-white text-xs font-bold border border-white/20">+</div>
+                <div class="w-6 h-6 rounded bg-slate-500 flex items-center justify-center text-white text-xs font-bold border border-white/20">+</div>
+            </div>
+            <div id="mission-operator" class="text-gray-300 font-bold text-lg">?</div>
+            <div class="flex items-center gap-1">
+                <div class="w-6 h-6 rounded-full bg-slate-500 flex items-center justify-center text-white text-xs font-bold opacity-90 border border-white/20">●</div>
+                <span id="mission-circle-label" class="text-[10px] font-bold text-gray-300 uppercase ml-1">...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- GAME AREA -->
+    <main id="game-area" class="w-full max-w-md">
+        <!-- Items go here -->
+    </main>
+
+    <!-- FOOTER -->
+    <div class="w-full max-w-md glass-panel p-5 z-10 shrink-0 mb-4">
+        <div class="flex justify-between items-end mb-3">
+            <div>
+                <span class="text-[10px] font-bold text-gray-400 uppercase block tracking-wider">Sisa Waktu</span>
+                <span class="text-3xl font-black text-white" id="timer-text">60</span><span class="text-sm text-gray-400 font-bold ml-1">detik</span>
+            </div>
+            <div class="text-right">
+                <span class="text-[10px] font-bold text-gray-400 uppercase block tracking-wider">Ronde</span>
+                <div class="flex items-baseline justify-end gap-1">
+                    <span class="text-3xl font-black text-indigo-300" id="round-text">1</span>
+                    <span class="text-sm font-bold text-gray-500">/ 10</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="progress-container w-full mb-4">
+            <div id="timer-bar" class="progress-fill w-full"></div>
+        </div>
+
+        <div class="flex justify-between">
+            <div class="flex items-center gap-2 bg-pink-500/10 px-3 py-1.5 rounded-xl border border-pink-500/30 shadow-sm">
+                <span class="text-base">🌹</span>
+                <div class="flex flex-col">
+                    <span class="text-[9px] font-bold text-pink-300 uppercase leading-none">Gift</span>
+                    <span class="text-[10px] font-black text-pink-400 uppercase leading-none">Freeze</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 bg-red-500/10 px-3 py-1.5 rounded-xl border border-red-500/30 shadow-sm">
+                <span class="text-base">❤️</span>
+                <div class="flex flex-col">
+                    <span class="text-[9px] font-bold text-red-300 uppercase leading-none">Like</span>
+                    <span class="text-[10px] font-black text-red-400 uppercase leading-none">+Waktu</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SAFE ZONE -->
+    <div class="w-full h-36 shrink-0"></div> 
+
+    <!-- TOAST MENANG -->
+    <div id="color-winner-toast" class="hidden absolute top-32 left-1/2 transform -translate-x-1/2 z-50 w-72"> 
+        <div class="bg-slate-800/95 backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-white/20 animate-bounce text-center flex items-center gap-3">
+            <img id="toast-avatar" src="" class="w-10 h-10 rounded-full border-2 border-white/50 shadow-md bg-gray-600" alt="Avatar">
+            <div class="text-left flex-1 min-w-0">
+                <div class="text-sm font-black text-white truncate" id="color-winner-name">User</div>
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-bold text-gray-400 uppercase">Menjawab</span>
+                    <div id="color-winner-detail" class="text-xs font-black text-white px-2 py-0.5 rounded-md shadow-sm inline-block">...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OVERLAY PEMENANG RONDE -->
+    <div id="round-winner-overlay" class="hidden fixed inset-0 flex items-center justify-center p-6 opacity-0 pointer-events-none">
+        <div class="winner-card w-full max-w-sm rounded-3xl p-6 text-center transform scale-90 transition-transform duration-500 flex flex-col max-h-[80vh]">
+            <div class="text-5xl mb-2 animate-bounce">🏆</div>
+            <h2 class="text-lg font-bold text-indigo-300 uppercase tracking-widest mb-4">Pemenang Ronde <span id="overlay-round-num">1</span></h2>
+            <div class="winner-list-container flex-grow overflow-y-auto mb-4 pr-1 text-left space-y-2" id="winner-list-content"></div>
+            <div class="pt-4 border-t border-white/10">
+                <div class="text-xs font-bold text-emerald-400 animate-pulse">Melanjut ke Ronde Berikutnya...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OVERLAY GAME OVER -->
+    <div id="game-over-overlay" class="hidden fixed inset-0 flex items-center justify-center bg-slate-900/95 p-4 overflow-hidden">
+        <div class="w-full max-w-md flex flex-col items-center">
+            <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400 mb-2 drop-shadow-lg">TOP GLOBAL</h1>
+            <p class="text-gray-400 text-sm mb-8 tracking-widest uppercase">Hasil Akhir 10 Ronde</p>
+            <div class="podium-container w-full h-64 relative">
+                <!-- Podiums... -->
+                <div class="podium-place rank-2" id="podium-2">
+                    <div class="podium-avatar"><img src="" class="user-avatar hidden"><span class="fallback-text">2</span></div>
+                    <div class="text-xs font-bold text-gray-300 mb-1 truncate w-20 text-center name-label">User2</div>
+                    <div class="podium-pillar"><div class="text-2xl font-black">2</div><div class="score-pill">0 Poin</div></div>
+                </div>
+                <div class="podium-place rank-1" id="podium-1">
+                    <div class="absolute -top-12 animate-bounce text-4xl">👑</div>
+                    <div class="podium-avatar"><img src="" class="user-avatar hidden"><span class="fallback-text">1</span></div>
+                    <div class="text-sm font-bold text-yellow-200 mb-1 truncate w-24 text-center name-label">User1</div>
+                    <div class="podium-pillar"><div class="text-4xl font-black">1</div><div class="score-pill">0 Poin</div></div>
+                </div>
+                <div class="podium-place rank-3" id="podium-3">
+                    <div class="podium-avatar"><img src="" class="user-avatar hidden"><span class="fallback-text">3</span></div>
+                    <div class="text-xs font-bold text-amber-200 mb-1 truncate w-20 text-center name-label">User3</div>
+                    <div class="podium-pillar"><div class="text-2xl font-black">3</div><div class="score-pill">0 Poin</div></div>
+                </div>
+            </div>
+            <div class="w-full bg-white/5 rounded-2xl p-4 max-h-48 overflow-y-auto winner-list-container space-y-2 border border-white/5" id="global-rank-list"></div>
+            <button onclick="location.reload()" class="mt-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-10 rounded-full shadow-lg shadow-indigo-500/50 transition-all transform hover:scale-105 active:scale-95">Main Lagi</button>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="hidden fixed inset-0 flex items-center justify-center p-6 opacity-0 pointer-events-none">
+        <div class="settings-card w-full max-w-xs rounded-2xl p-6 text-center transform scale-95 transition-transform duration-300">
+            <h2 class="text-lg font-bold text-white mb-4">Pengaturan Koneksi</h2>
+            <div class="mb-4 text-left">
+                <label class="text-xs text-gray-400 block mb-1">WebSocket URL (IndoFinity)</label>
+                <input type="text" id="ws-url-input" class="w-full bg-black/40 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" placeholder="ws://localhost:62024">
+                <p class="text-[10px] text-gray-500 mt-1">Gunakan IP lokal jika di HP (cth: ws://192.168.1.5:62024)</p>
+            </div>
+            <div class="flex gap-2">
+                <button id="close-settings" class="flex-1 bg-gray-600 hover:bg-gray-500 text-white text-sm font-bold py-2 rounded">Batal</button>
+                <button id="save-settings" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold py-2 rounded">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFIKASI -->
+    <div id="notif-area" class="absolute top-20 right-4 flex flex-col items-end gap-2 pointer-events-none z-40"></div>
+
+    <!-- SIMULATION STATUS -->
+    <div id="sim-status" class="hidden fixed top-4 left-4 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded z-50 animate-pulse">
+        MOCK SIM (SHIFT+S)
+    </div>
+
+    <script>
+        // --- SOUND MANAGER ---
+        class SoundManager {
+            constructor() {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                this.isMuted = true; 
+            }
+            toggleMute() {
+                this.isMuted = !this.isMuted;
+                const btn = document.getElementById('mute-btn');
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                if (this.isMuted) {
+                    btn.innerText = '🔇 NYALAKAN SFX';
+                    btn.classList.remove('playing');
+                } else {
+                    btn.innerText = '🔊 SFX ON';
+                    btn.classList.add('playing');
+                    this.playTick();
+                }
+            }
+            playTone(freq, type, duration, vol = 0.1) {
+                if (this.isMuted) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            }
+            playPop() {
+                if (this.isMuted) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+            playCoin() { this.playTone(1200, 'sine', 0.1, 0.1); setTimeout(() => this.playTone(1600, 'sine', 0.3, 0.1), 50); }
+            playWin() { this.playTone(523.25, 'sine', 0.5, 0.1); setTimeout(() => this.playTone(659.25, 'sine', 0.5, 0.1), 100); setTimeout(() => this.playTone(783.99, 'sine', 0.8, 0.1), 200); }
+            playTick() {
+                if (this.isMuted) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+                osc.type = 'square';
+                gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            }
+        }
+        const sfx = new SoundManager();
+        document.getElementById('mute-btn').addEventListener('click', () => sfx.toggleMute());
+
+        // --- BACKGROUND ---
+        function initBackground() {
+            const container = document.getElementById('math-bg');
+            const symbols = ['+', '-', '×', '÷', '%', 'π', '√', '∞', '=', '∫', '∑'];
+            for (let i = 0; i < 20; i++) {
+                const el = document.createElement('div');
+                el.classList.add('floating-symbol');
+                el.innerText = symbols[Math.floor(Math.random() * symbols.length)];
+                el.style.left = `${Math.random() * 100}%`;
+                el.style.fontSize = `${Math.random() * 2 + 1}rem`;
+                el.style.animation = `floatUp ${Math.random() * 10 + 15}s linear ${Math.random() * 15}s infinite`;
+                container.appendChild(el);
+            }
+        }
+        initBackground();
+
+        // --- CONFIG ---
+        const MISSIONS = [
+            { id: 'CLASSIC', title: 'Jumlah Kotak, Kalikan Bulat!', operatorIcon: '×', circleLabel: 'DIKALI', calc: (sqSum, ciSum) => sqSum * ciSum },
+            { id: 'ADD_ALL', title: 'Jumlahkan Semuanya!', operatorIcon: '+', circleLabel: 'DITAMBAH', calc: (sqSum, ciSum) => sqSum + ciSum },
+            { id: 'SUBTRACT', title: 'Kotak Dikurang Bulat!', operatorIcon: '-', circleLabel: 'PENGURANG', calc: (sqSum, ciSum) => sqSum - ciSum }
+        ];
+
+        const CONFIG = {
+            colors: [
+                { name: 'Merah', class: 'bg-flat-red' }, { name: 'Biru', class: 'bg-flat-blue' },
+                { name: 'Hijau', class: 'bg-flat-green' }, { name: 'Ungu', class: 'bg-flat-purple' },
+                { name: 'Oren', class: 'bg-flat-orange' }, { name: 'Pink', class: 'bg-flat-pink' },
+                { name: 'Kuning', class: 'bg-flat-yellow' }, { name: 'Tosca', class: 'bg-flat-teal' },
+                { name: 'Hitam', class: 'bg-flat-black' }, { name: 'Coklat', class: 'bg-flat-brown' },
+                { name: 'Navy', class: 'bg-flat-navy' }
+            ],
+            roundTime: 60, minNumber: 2, maxSquareVal: 12, maxCircleVal: 6, maxRounds: 10
+        };
+
+        let state = {
+            isPlaying: false, timeLeft: CONFIG.roundTime, answers: {}, activeColorsCount: 0,
+            timerInterval: null, currentMission: null, currentRound: 1,
+            isSimulationRunning: false, simInterval: null,
+            roundScores: {}, globalScores: {}, userSolvedColors: {}, clearingColors: {}, users: {} 
+        };
+
+        const els = {
+            gameArea: document.getElementById('game-area'), timerText: document.getElementById('timer-text'), timerBar: document.getElementById('timer-bar'),
+            colorToast: document.getElementById('color-winner-toast'), colorWinnerName: document.getElementById('color-winner-name'), colorWinnerDetail: document.getElementById('color-winner-detail'), toastAvatar: document.getElementById('toast-avatar'),
+            roundOverlay: document.getElementById('round-winner-overlay'), overlayRoundNum: document.getElementById('overlay-round-num'), overlayMission: document.getElementById('overlay-mission'), winnerListContent: document.getElementById('winner-list-content'),
+            gameOverOverlay: document.getElementById('game-over-overlay'), notifArea: document.getElementById('notif-area'), roundText: document.getElementById('round-text'),
+            missionTitle: document.getElementById('mission-title'), missionOperator: document.getElementById('mission-operator'), missionCircleLabel: document.getElementById('mission-circle-label'), simStatus: document.getElementById('sim-status'),
+            podium1: document.getElementById('podium-1'), podium2: document.getElementById('podium-2'), podium3: document.getElementById('podium-3'), globalRankList: document.getElementById('global-rank-list'),
+            connStatus: document.getElementById('connection-status'), connText: document.getElementById('status-text'),
+            settingsBtn: document.getElementById('settings-btn'), settingsModal: document.getElementById('settings-modal'),
+            wsUrlInput: document.getElementById('ws-url-input'), saveSettingsBtn: document.getElementById('save-settings'), closeSettingsBtn: document.getElementById('close-settings')
+        };
+
+        // --- WEBSOCKET CONNECTION ---
+        let ws;
+        let wsUrl = localStorage.getItem('ws_url') || 'ws://localhost:62024';
+
+        function initWS() {
+            if (ws) {
+                ws.onclose = null; // Remove listeners to prevent loops
+                ws.close();
+            }
+            
+            console.log(`Connecting to WS: ${wsUrl}`);
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = function () {
+                console.log('✅ Terhubung ke IndoFinity');
+                updateConnectionStatus('connected');
+                showNotification('System', 'Game Siap!', 'sys');
+                // Only start if not already playing or just starting
+                if(!state.isPlaying && state.currentRound === 1) startGame();
+            };
+
+            ws.onmessage = function (event) {
+                try {
+                    const message = JSON.parse(event.data);
+                    handleTikTokEvent(message.event, message.data);
+                } catch (error) {}
+            };
+
+            ws.onerror = function (err) {
+                console.error('WS Error:', err);
+                updateConnectionStatus('disconnected');
+            };
+
+            ws.onclose = function () {
+                console.log('WS Closed');
+                updateConnectionStatus('disconnected');
+            };
+        }
+
+        function updateConnectionStatus(status) {
+            els.connStatus.classList.remove('online', 'offline');
+            if (status === 'connected') {
+                els.connStatus.classList.add('online');
+                els.connText.innerText = 'LIVE CONNECTED';
+            } else {
+                els.connStatus.classList.add('offline');
+                els.connText.innerText = 'DISCONNECTED';
+            }
+        }
+
+        // --- SETTINGS LOGIC ---
+        els.settingsBtn.addEventListener('click', () => {
+            els.wsUrlInput.value = wsUrl;
+            els.settingsModal.classList.remove('hidden');
+            els.settingsModal.classList.add('flex');
+            setTimeout(() => {
+                els.settingsModal.style.opacity = '1';
+                els.settingsModal.style.pointerEvents = 'auto';
+            }, 10);
+        });
+
+        els.closeSettingsBtn.addEventListener('click', () => {
+            els.settingsModal.style.opacity = '0';
+            els.settingsModal.style.pointerEvents = 'none';
+            setTimeout(() => {
+                els.settingsModal.classList.add('hidden');
+                els.settingsModal.classList.remove('flex');
+            }, 500);
+        });
+
+        els.saveSettingsBtn.addEventListener('click', () => {
+            const newUrl = els.wsUrlInput.value.trim();
+            if (newUrl) {
+                wsUrl = newUrl;
+                localStorage.setItem('ws_url', wsUrl);
+                initWS(); // Reconnect
+                els.closeSettingsBtn.click();
+                showNotification('System', 'URL Tersimpan. Menghubungkan ulang...', 'sys');
+            }
+        });
+
+        // Initialize WS
+        initWS();
+
+        function handleTikTokEvent(type, data) {
+            if (!type || (!state.isPlaying && type !== 'gift')) return;
+            switch(type) {
+                case 'chat': checkAnswer(data.uniqueId, data.comment, data.nickname, data.profilePictureUrl); break;
+                case 'like': addTime(2); break;
+                case 'gift': handleGift(data); break;
+            }
+        }
+
+        function startGame() {
+            if (state.currentRound > CONFIG.maxRounds) {
+                endGameSession();
+                return;
+            }
+            state.isPlaying = true;
+            state.timeLeft = CONFIG.roundTime;
+            state.answers = {};
+            state.activeColorsCount = 0;
+            state.roundScores = {}; 
+            state.userSolvedColors = {}; 
+            state.clearingColors = {}; 
+            
+            els.colorToast.classList.add('hidden');
+            els.roundOverlay.classList.add('hidden');
+            els.gameArea.innerHTML = '';
+            els.roundText.innerText = state.currentRound;
+            
+            state.currentMission = MISSIONS[Math.floor(Math.random() * MISSIONS.length)];
+            updateMissionUI();
+            generateLevel();
+            startTimer();
+        }
+
+        function endGameSession() {
+            state.isPlaying = false;
+            clearInterval(state.timerInterval);
+            sfx.playWin(); 
+            els.gameOverOverlay.classList.remove('hidden');
+            els.gameOverOverlay.classList.add('flex');
+            
+            const globalRanking = Object.entries(state.globalScores)
+                .map(([name, score]) => ({ name, score }))
+                .sort((a, b) => b.score - a.score);
+
+            [els.podium1, els.podium2, els.podium3].forEach(p => p.classList.remove('show'));
+
+            if (globalRanking[0]) updatePodium(els.podium1, globalRanking[0]);
+            if (globalRanking[1]) updatePodium(els.podium2, globalRanking[1]);
+            if (globalRanking[2]) updatePodium(els.podium3, globalRanking[2]);
+
+            els.globalRankList.innerHTML = '';
+            if (globalRanking.length > 3) {
+                for (let i = 3; i < globalRanking.length; i++) {
+                    const winner = globalRanking[i];
+                    const userData = state.users[winner.name] || {};
+                    const avatarUrl = userData.avatar || 'https://via.placeholder.com/40';
+                    const displayNick = userData.nickname || winner.name;
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center justify-between text-sm text-gray-300 px-2 py-1';
+                    div.innerHTML = `<div class="flex items-center gap-2"><span class="w-5 text-center text-xs font-bold text-gray-500">#${i+1}</span><img src="${avatarUrl}" class="w-6 h-6 rounded-full border border-gray-600"><span class="truncate w-32">${displayNick}</span></div><span class="font-bold text-white">${winner.score} Pts</span>`;
+                    els.globalRankList.appendChild(div);
+                }
+            } else if (globalRanking.length === 0) {
+                els.globalRankList.innerHTML = '<div class="text-center text-gray-500 italic">Belum ada pemenang global.</div>';
+            }
+
+            setTimeout(() => {
+                if (globalRanking[1]) els.podium2.classList.add('show'); 
+                setTimeout(() => {
+                    if (globalRanking[0]) els.podium1.classList.add('show'); 
+                    setTimeout(() => {
+                        if (globalRanking[2]) els.podium3.classList.add('show'); 
+                    }, 500);
+                }, 500);
+            }, 500);
+        }
+
+        function updatePodium(el, winner) {
+            const userData = state.users[winner.name] || {};
+            const displayNick = userData.nickname || winner.name;
+            const avatarUrl = userData.avatar;
+            el.querySelector('.name-label').innerText = displayNick;
+            el.querySelector('.score-pill').innerText = `${winner.score} Poin`;
+            const imgEl = el.querySelector('.user-avatar');
+            const textEl = el.querySelector('.fallback-text');
+            if (avatarUrl) {
+                imgEl.src = avatarUrl;
+                imgEl.classList.remove('hidden');
+                textEl.classList.add('hidden');
+            } else {
+                imgEl.classList.add('hidden');
+                textEl.classList.remove('hidden');
+                textEl.innerText = displayNick.substring(0, 2).toUpperCase();
+            }
+        }
+
+        function updateMissionUI() {
+            els.missionTitle.style.opacity = 0;
+            setTimeout(() => {
+                els.missionTitle.innerText = state.currentMission.title;
+                els.missionOperator.innerText = state.currentMission.operatorIcon;
+                els.missionCircleLabel.innerText = state.currentMission.circleLabel;
+                if(state.currentMission.id === 'ADD_ALL') els.missionOperator.className = "text-green-400 font-bold text-2xl";
+                else if(state.currentMission.id === 'SUBTRACT') els.missionOperator.className = "text-red-400 font-bold text-2xl";
+                else els.missionOperator.className = "text-gray-300 font-bold text-lg";
+                els.missionTitle.style.opacity = 1;
+            }, 200);
+        }
+
+        function generateLevel() {
+            const shuffledColors = [...CONFIG.colors].sort(() => 0.5 - Math.random());
+            const activeColors = shuffledColors.slice(0, 3); 
+            state.activeColorsCount = 3;
+            let shapesToRender = [];
+            activeColors.forEach(color => {
+                shapesToRender.push({ color: color, isCircle: false, val: getRandomNumber(false) });
+                shapesToRender.push({ color: color, isCircle: false, val: getRandomNumber(false) });
+                shapesToRender.push({ color: color, isCircle: true, val: getRandomNumber(true) });
+            });
+            shapesToRender.sort(() => Math.random() - 0.5);
+            shapesToRender.forEach((s, index) => createShapeElement(s.color, s.isCircle, s.val, index));
+            calculateAllAnswers(shapesToRender);
+        }
+
+        function getRandomNumber(isCircle) {
+            return Math.floor(Math.random() * (isCircle ? CONFIG.maxCircleVal : CONFIG.maxSquareVal) - CONFIG.minNumber + 1) + CONFIG.minNumber;
+        }
+
+        function calculateAllAnswers(shapes) {
+            let colorGroups = {};
+            shapes.forEach(s => {
+                if(!colorGroups[s.color.name]) colorGroups[s.color.name] = { squares: [], circles: [], colorObj: s.color };
+                if (s.isCircle) colorGroups[s.color.name].circles.push(s.val);
+                else colorGroups[s.color.name].squares.push(s.val);
+            });
+            for (let name in colorGroups) {
+                let group = colorGroups[name];
+                let sumSquares = group.squares.reduce((a, b) => a + b, 0);
+                let sumCircles = group.circles.reduce((a, b) => a + b, 0);
+                let result = state.currentMission.calc(sumSquares, sumCircles);
+                state.answers[name] = { result: result, colorObj: group.colorObj };
+                console.log(`[${state.currentMission.id}] ${name}: ${result}`); 
+            }
+        }
+
+        function createShapeElement(colorObj, isCircle, number, index) {
+            const el = document.createElement('div');
+            el.dataset.colorName = colorObj.name; 
+            el.className = `shape ${colorObj.class} ${isCircle ? 'shape-circle' : 'shape-square'}`;
+            el.innerText = number;
+            el.style.animationDelay = `${index * 0.05}s`; 
+            els.gameArea.appendChild(el);
+        }
+
+        function checkAnswer(uniqueId, comment, nickname, avatarUrl) {
+            if (!state.users[uniqueId]) {
+                state.users[uniqueId] = { nickname: nickname || uniqueId, avatar: avatarUrl };
+            } else {
+                if (nickname) state.users[uniqueId].nickname = nickname;
+                if (avatarUrl) state.users[uniqueId].avatar = avatarUrl;
+            }
+            const match = comment.match(/-?\d+/);
+            if (!match) return;
+            const guess = parseInt(match[0]);
+            for (let colorName in state.answers) {
+                if (state.answers[colorName].result === guess) {
+                    handleCorrectAnswer(uniqueId, colorName, state.answers[colorName].colorObj, guess);
+                    return; 
+                }
+            }
+        }
+
+        function handleCorrectAnswer(user, colorName, colorObj, answerValue) {
+            if (state.userSolvedColors[user] && state.userSolvedColors[user][colorName]) return; 
+            if (!state.userSolvedColors[user]) state.userSolvedColors[user] = {};
+            state.userSolvedColors[user][colorName] = true;
+            if (!state.roundScores[user]) state.roundScores[user] = 0;
+            state.roundScores[user]++;
+            if (!state.globalScores[user]) state.globalScores[user] = 0;
+            state.globalScores[user]++;
+            if (state.clearingColors[colorName]) return;
+            state.clearingColors[colorName] = true;
+            sfx.playPop();
+            showColorToast(user, colorName, colorObj, answerValue);
+            setTimeout(() => {
+                delete state.answers[colorName];
+                state.activeColorsCount--;
+                const elements = document.querySelectorAll(`[data-color-name="${colorName}"]`);
+                elements.forEach((el, i) => {
+                    setTimeout(() => {
+                        el.classList.add('solved'); 
+                        setTimeout(() => el.remove(), 500);
+                    }, i * 50); 
+                });
+                if (state.activeColorsCount <= 0) {
+                    setTimeout(() => endRound(), 1000);
+                }
+            }, 500); 
+        }
+
+        function showColorToast(user, colorName, colorObj, answerValue) {
+            const userData = state.users[user] || {};
+            const displayName = userData.nickname || user;
+            const avatarUrl = userData.avatar || 'https://via.placeholder.com/40';
+            els.colorWinnerName.innerText = displayName;
+            els.toastAvatar.src = avatarUrl;
+            els.colorWinnerDetail.innerText = `${colorName.toUpperCase()} = ${answerValue}`;
+            els.colorWinnerDetail.className = `text-xs font-black text-white px-3 py-1 rounded-full mt-1 shadow-md inline-block ${colorObj.class}`;
+            els.colorToast.classList.remove('hidden');
+            setTimeout(() => els.colorToast.classList.add('hidden'), 2000);
+        }
+
+        function endRound() {
+            state.isPlaying = false;
+            clearInterval(state.timerInterval);
+            sfx.playWin(); 
+            els.winnerListContent.innerHTML = '';
+            const sortedWinners = Object.entries(state.roundScores)
+                .map(([name, score]) => ({ name, score }))
+                .sort((a, b) => b.score - a.score);
+            if (sortedWinners.length > 0) {
+                sortedWinners.forEach((winner, index) => {
+                    const userData = state.users[winner.name] || {};
+                    const displayNick = userData.nickname || winner.name;
+                    const avatarUrl = userData.avatar || 'https://via.placeholder.com/30';
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5 mb-2';
+                    let rankStyle = "bg-slate-700 text-gray-300";
+                    if (index === 0) rankStyle = "bg-yellow-500 text-white shadow-lg";
+                    if (index === 1) rankStyle = "bg-slate-300 text-slate-800";
+                    if (index === 2) rankStyle = "bg-amber-700 text-amber-100";
+                    row.innerHTML = `<div class="flex items-center gap-3"><div class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${rankStyle}">${index + 1}</div><img src="${avatarUrl}" class="w-8 h-8 rounded-full border border-gray-600 object-cover"><span class="font-bold text-white text-sm truncate w-24">${displayNick}</span></div><div class="flex items-center gap-1 score-badge px-2 py-1 rounded-lg text-[10px]"><span>${winner.score}</span> Benar</div>`;
+                    els.winnerListContent.appendChild(row);
+                });
+            } else {
+                els.winnerListContent.innerHTML = '<div class="text-center text-gray-400 py-4 italic">Tidak ada pemenang :(</div>';
+            }
+            els.overlayRoundNum.innerText = state.currentRound;
+            els.roundOverlay.classList.remove('hidden');
+            els.roundOverlay.classList.add('flex');
+            setTimeout(() => {
+                els.roundOverlay.style.opacity = '1';
+                els.roundOverlay.style.pointerEvents = 'auto';
+                document.querySelector('.winner-card').style.transform = 'scale(1)';
+            }, 10);
+            setTimeout(() => {
+                state.currentRound++;
+                els.roundOverlay.style.opacity = '0';
+                els.roundOverlay.style.pointerEvents = 'none';
+                document.querySelector('.winner-card').style.transform = 'scale(0.9)';
+                setTimeout(() => startGame(), 500);
+            }, 6000);
+        }
+
+        function startTimer() {
+            clearInterval(state.timerInterval);
+            updateTimerUI();
+            state.timerInterval = setInterval(() => {
+                state.timeLeft--;
+                updateTimerUI();
+                if (state.timeLeft <= 10 && state.timeLeft > 0) sfx.playTick();
+                if (state.timeLeft <= 0) {
+                    state.isPlaying = false;
+                    clearInterval(state.timerInterval);
+                    showNotification('SYSTEM', 'WAKTU HABIS! RESTART RONDE...', 'alert');
+                    setTimeout(startGame, 3000); 
+                }
+            }, 1000);
+        }
+
+        function updateTimerUI() {
+            els.timerText.innerText = state.timeLeft;
+            const percentage = (state.timeLeft / CONFIG.roundTime) * 100;
+            els.timerBar.style.width = `${percentage}%`;
+            if (percentage < 30) els.timerBar.style.backgroundColor = '#F87171'; 
+            else els.timerBar.style.backgroundColor = '#818CF8'; 
+        }
+
+        function addTime(seconds) { state.timeLeft += seconds; }
+
+        function handleGift(data) {
+            showNotification(data.uniqueId, `Gift: ${data.giftName}`, 'gift');
+            sfx.playCoin(); 
+            state.timeLeft += 15; 
+            const originalColor = els.timerBar.style.backgroundColor;
+            els.timerBar.style.backgroundColor = '#60A5FA'; 
+            setTimeout(() => els.timerBar.style.backgroundColor = originalColor, 1000);
+        }
+
+        function showNotification(user, text, type) {
+            const div = document.createElement('div');
+            let classes = 'bg-slate-700 text-white border-slate-600';
+            if (type === 'gift') classes = 'bg-pink-600 text-white border-pink-500';
+            if (type === 'alert') classes = 'bg-red-600 text-white border-red-500';
+            div.className = `${classes} border px-4 py-2 rounded-xl shadow-lg text-xs font-bold flex items-center gap-2 animate-bounce mb-2`;
+            div.innerHTML = `<span>${user}</span>: ${text}`;
+            els.notifArea.appendChild(div);
+            setTimeout(() => div.remove(), 3000);
+        }
+
+        // --- MOCK SIMULATION ---
+        document.addEventListener('keydown', (e) => {
+            if (e.shiftKey && e.key.toLowerCase() === 's') toggleSimulation();
+        });
+
+        function toggleSimulation() {
+            state.isSimulationRunning = !state.isSimulationRunning;
+            if (state.isSimulationRunning) {
+                els.simStatus.classList.remove('hidden');
+                console.log("🚀 SIM START");
+                state.simInterval = setInterval(runMockEvent, 500); 
+            } else {
+                els.simStatus.classList.add('hidden');
+                console.log("🛑 SIM STOP");
+                clearInterval(state.simInterval);
+            }
+        }
+
+        const MOCK_USERS = [
+            { id: 'user1', name: 'Budi01', avatar: 'https://ui-avatars.com/api/?name=Budi01&background=random' },
+            { id: 'user2', name: 'Siti_Gamer', avatar: 'https://ui-avatars.com/api/?name=Siti+Gamer&background=random' },
+            { id: 'user3', name: 'Rizky.X', avatar: 'https://ui-avatars.com/api/?name=Rizky+X&background=random' },
+            { id: 'user4', name: 'Dewi_Cantik', avatar: 'https://ui-avatars.com/api/?name=Dewi&background=random' },
+            { id: 'user5', name: 'ProPlayer99', avatar: 'https://ui-avatars.com/api/?name=Pro&background=random' }
+        ];
+        
+        function runMockEvent() {
+            if (!state.isPlaying) return;
+            const rand = Math.random();
+            const mockUser = MOCK_USERS[Math.floor(Math.random() * MOCK_USERS.length)];
+            if (rand < 0.7) { 
+                let answer;
+                const correctKeys = Object.keys(state.answers);
+                if (correctKeys.length > 0 && Math.random() > 0.4) {
+                    const targetColor = correctKeys[Math.floor(Math.random() * correctKeys.length)];
+                    answer = state.answers[targetColor].result;
+                } else {
+                    answer = Math.floor(Math.random() * 100);
+                }
+                handleTikTokEvent('chat', { 
+                    uniqueId: mockUser.id, 
+                    comment: `Jawabanku ${answer}`,
+                    nickname: mockUser.name,
+                    profilePictureUrl: mockUser.avatar
+                });
+            } else if (rand < 0.9) { 
+                handleTikTokEvent('like', { uniqueId: mockUser.id });
+            } else { 
+                const gifts = ['Rose', 'Finger Heart', 'TikTok'];
+                handleTikTokEvent('gift', { uniqueId: mockUser.id, giftName: gifts[Math.floor(Math.random() * gifts.length)] });
+            }
+        }
+    </script>
+</body>
+</html>
